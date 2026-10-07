@@ -1,17 +1,14 @@
 import streamlit as st
 import requests
+import urllib.parse
 
-# ==============================================================================
-# 🔑 API-KEY EINSTELLUNG:
-# Hier deinen OpenRouter Key eintragen oder leer lassen für manuelle Eingabe in der UI
-# ==============================================================================
-DEFAULT_OPENROUTER_KEY = ""
+DEFAULT_OPENROUTER_KEY = "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"
 
 
 def ask_stock_ai(api_key: str, prompt: str, current_symbol: str, stock_info: dict, watchlist: list) -> str:
     """Sendet eine Anfrage über die OpenRouter API mit dem Modell 'openrouter/free'."""
     if not api_key:
-        return "⚠️ Bitte gib zuerst einen gültigen OpenRouter API-Key in der Sidebar ein."
+        return "⚠️ Bitte gib zuerst einen gültigen OpenRouter API-Key an."
 
     context = f"""
     Du bist ein erfahrener KI-Finanz- und Aktien-Analyst in einem professionellen Dashboard.
@@ -25,12 +22,11 @@ def ask_stock_ai(api_key: str, prompt: str, current_symbol: str, stock_info: dic
     - Aktuelle Watchlist des Nutzers: {', '.join(watchlist)}
     
     Aufgabe:
-    Beantworte die Anfrage des Nutzers präzise, analytisch und auf Deutsch. 
+    Beantworte die Anfrage des Nutzers präzise, auf Deutsch und fass dich kurz (max. 3-4 Sätze oder übersichtliche Stichpunkte).
     Falls der Nutzer nach einer Kauf- oder Verkaufsempfehlung fragt:
-    1. Gib eine klare, nachvollziehbare Einschätzung (z.B. Einschätzung: KAUFEN / HALTEN / VERKAUFEN mit Begründung basierend auf Kennzahlen/Marktlage).
-    2. Hebe Chancen und Risiken hervor.
-    3. FÜGE AM ENDE JEDER ANTWORT UNBEDINGT DIESEN SATZ HINZU:
-       "⚠️ *Haftungsausschluss: Dies ist keine Anlageberatung. Alle Angaben ohne Gewähr. Keine Haftung für Verluste oder Schäden.*"
+    1. Gib eine kurze, klare Einschätzung (KAUFEN / HALTEN / VERKAUFEN mit prägnanter Begründung).
+    2. FÜGE AM ENDE UNBEDINGT DIESEN SATZ HINZU:
+       "⚠️ Haftungsausschluss: Keine Anlageberatung. Keine Haftung für Verluste."
     
     Frage des Nutzers: {prompt}
     """
@@ -63,58 +59,74 @@ def ask_stock_ai(api_key: str, prompt: str, current_symbol: str, stock_info: dic
         return f"Fehler bei der Verbindung zu OpenRouter: {str(e)}"
 
 
-def render_ai_sidebar(current_symbol: str, stock_info: dict, watchlist: list):
-    """Rendert das OpenRouter KI-Chat-UI in der Streamlit-Sidebar."""
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("🤖 KI-Finanzassistent")
+def render_ai_top_bar(current_symbol: str, stock_info: dict, watchlist: list):
+    """Rendert ein kompaktes KI-Pop-up-Icon am oberen Rand der Hauptseite."""
+    
+    # Zustand initialisieren
+    if "latest_ai_answer" not in st.session_state:
+        st.session_state.latest_ai_answer = ""
+    if "speak_ai_answer" not in st.session_state:
+        st.session_state.speak_ai_answer = False
 
-    # Wichtiger Haftungsausschluss-Banner
-    st.sidebar.warning(
-        "⚖️ **Rechtlicher Hinweis:**\n\n"
-        "Die KI gibt automatische Analysen & Einschätzungen. "
-        "Dies stellt **keine Finanzberatung** dar. "
-        "Für etwaige Anlageentscheidungen oder Verluste wird **keinerlei Haftung** übernommen."
-    )
+    # Kompaktes Top-Layout: KI-Button oben links
+    col_icon, col_status = st.columns([1, 5])
 
-    # API-Key Eingabefeld
-    openrouter_api_key = st.sidebar.text_input(
-        "🔑 OpenRouter API-Key:", 
-        value=DEFAULT_OPENROUTER_KEY,
-        type="password", 
-        placeholder="sk-or-v1-...",
-        help="Erstelle dir einen Key unter https://openrouter.ai/keys"
-    )
-
-    # Schnell-Aktionsbuttons für Kaufempfehlung
-    st.sidebar.markdown("**⚡ KI-Schnellanalyse:**")
-    col_ai1, col_ai2 = st.sidebar.columns(2)
-    quick_prompt = None
-    if col_ai1.button("💡 Kaufempfehlung?"):
-        quick_prompt = f"Gib mir eine Kaufempfehlung und Risikoanalyse für die Aktie {current_symbol}."
-    if col_ai2.button("📊 Kennzahlen-Check"):
-        quick_prompt = f"Analysiere die Kennzahlen (KGV, Marktkapitalisierung) von {current_symbol}."
-
-    # Chat-Verlauf im Session-State speichern
-    if "ai_messages" not in st.session_state:
-        st.session_state.ai_messages = []
-
-    # Chat-Bereich
-    with st.sidebar.expander("💬 KI-Chat öffnen", expanded=True):
-        # Bisherigen Verlauf anzeigen
-        for msg in st.session_state.ai_messages:
-            with st.chat_message(msg["role"]):
-                st.write(msg["content"])
-
-        user_prompt = st.chat_input(f"Frage zu {current_symbol}...")
-        
-        # Falls ein Schnell-Button geklickt wurde
-        if quick_prompt:
-            user_prompt = quick_prompt
-
-        if user_prompt:
-            st.session_state.ai_messages.append({"role": "user", "content": user_prompt})
+    with col_icon:
+        # Erstellt den kleinen Popover-Button oben links
+        with st.popover("🤖 KI-Assistent", use_container_width=True):
+            st.markdown("### 🤖 KI-Analyst")
+            st.caption("Einschätzungen, Kaufempfehlungen & Kennzahlen-Checks")
             
-            with st.spinner("KI analysiert die Aktie..."):
-                answer = ask_stock_ai(openrouter_api_key, user_prompt, current_symbol, stock_info, watchlist)
-                st.session_state.ai_messages.append({"role": "assistant", "content": answer})
+            # Wichtiger Disclaimer
+            st.warning("⚖️ **Keine Anlageberatung:** Die KI-Einschätzungen erfolgen ohne Gewähr. Der Betreiber haftet nicht für etwaige Verluste.")
+            
+            # API Key Key-Input
+            api_key = st.text_input(
+                "🔑 OpenRouter API-Key:", 
+                value=DEFAULT_OPENROUTER_KEY,
+                type="password"
+            )
+
+            # Quick-Buttons für Kaufempfehlungen
+            st.markdown("**⚡ Schnell-Anfrage:**")
+            q_col1, q_col2 = st.columns(2)
+            quick_prompt = None
+            if q_col1.button("💡 Kaufempfehlung?"):
+                quick_prompt = f"Gib mir eine kurze Kaufempfehlung für {current_symbol}."
+            if q_col2.button("📊 Quick-Check"):
+                quick_prompt = f"Analysiere kurz die Kennzahlen von {current_symbol}."
+
+            # Eingabefeld
+            user_prompt = st.text_input("Deine Frage an die KI:", placeholder=f"Z. B. Sollte ich {current_symbol} jetzt kaufen?")
+            
+            if quick_prompt:
+                user_prompt = quick_prompt
+
+            if st.button("🚀 KI Anfragen", type="primary") and user_prompt:
+                with st.spinner("KI analysiert..."):
+                    answer = ask_stock_ai(api_key, user_prompt, current_symbol, stock_info, watchlist)
+                    st.session_state.latest_ai_answer = answer
+                    st.rerun()
+
+    # Zeige die KI-Antwort direkt oben am Hauptschirm an, wenn eine vorliegt
+    if st.session_state.latest_ai_answer:
+        st.info(f"**🤖 KI-Einschätzung zu {current_symbol}:**\n\n" + st.session_state.latest_ai_answer)
+        
+        # Vorlese-Button & Vorlesewidget (per JavaScript Web Speech API)
+        col_btn1, col_btn2 = st.columns([1, 4])
+        with col_btn1:
+            if st.button("🔊 Antwort vorlesen"):
+                # Clean text for speech JS
+                clean_text = st.session_state.latest_ai_answer.replace('"', "'").replace("\n", " ")
+                js_code = f"""
+                <script>
+                    var msg = new SpeechSynthesisUtterance("{clean_text}");
+                    msg.lang = "de-DE";
+                    window.speechSynthesis.speak(msg);
+                </script>
+                """
+                st.components.v1.html(js_code, height=0)
+        with col_btn2:
+            if st.button("❌ Schließen"):
+                st.session_state.latest_ai_answer = ""
                 st.rerun()
