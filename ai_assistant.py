@@ -1,14 +1,17 @@
 import streamlit as st
 import requests
-import urllib.parse
 
-DEFAULT_OPENROUTER_KEY = "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"
-
+def get_openrouter_api_key() -> str:
+    """Holt den API-Key sicher aus den Streamlit Secrets oder Session State."""
+    try:
+        return st.secrets["OPENROUTER_API_KEY"]
+    except Exception:
+        return ""
 
 def ask_stock_ai(api_key: str, prompt: str, current_symbol: str, stock_info: dict, watchlist: list) -> str:
     """Sendet eine Anfrage über die OpenRouter API mit dem Modell 'openrouter/free'."""
     if not api_key:
-        return "⚠️ Bitte gib zuerst einen gültigen OpenRouter API-Key an."
+        return "⚠️ Kein API-Key im System hinterlegt. Bitte erstelle den API-Key in den Streamlit Secrets."
 
     context = f"""
     Du bist ein erfahrener KI-Finanz- und Aktien-Analyst in einem professionellen Dashboard.
@@ -65,8 +68,9 @@ def render_ai_top_bar(current_symbol: str, stock_info: dict, watchlist: list):
     # Zustand initialisieren
     if "latest_ai_answer" not in st.session_state:
         st.session_state.latest_ai_answer = ""
-    if "speak_ai_answer" not in st.session_state:
-        st.session_state.speak_ai_answer = False
+
+    # Key im Hintergrund abrufen
+    api_key = get_openrouter_api_key()
 
     # Kompaktes Top-Layout: KI-Button oben links
     col_icon, col_status = st.columns([1, 5])
@@ -79,13 +83,6 @@ def render_ai_top_bar(current_symbol: str, stock_info: dict, watchlist: list):
             
             # Wichtiger Disclaimer
             st.warning("⚖️ **Keine Anlageberatung:** Die KI-Einschätzungen erfolgen ohne Gewähr. Der Betreiber haftet nicht für etwaige Verluste.")
-            
-            # API Key Key-Input
-            api_key = st.text_input(
-                "🔑 OpenRouter API-Key:", 
-                value=DEFAULT_OPENROUTER_KEY,
-                type="password"
-            )
 
             # Quick-Buttons für Kaufempfehlungen
             st.markdown("**⚡ Schnell-Anfrage:**")
@@ -112,11 +109,9 @@ def render_ai_top_bar(current_symbol: str, stock_info: dict, watchlist: list):
     if st.session_state.latest_ai_answer:
         st.info(f"**🤖 KI-Einschätzung zu {current_symbol}:**\n\n" + st.session_state.latest_ai_answer)
         
-        # Vorlese-Button & Vorlesewidget (per JavaScript Web Speech API)
         col_btn1, col_btn2 = st.columns([1, 4])
         with col_btn1:
             if st.button("🔊 Antwort vorlesen"):
-                # Clean text for speech JS
                 clean_text = st.session_state.latest_ai_answer.replace('"', "'").replace("\n", " ")
                 js_code = f"""
                 <script>
