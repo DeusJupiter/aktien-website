@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 import pandas as pd
 import json
 import os
-from ai_assistant import render_ai_sidebar
+from ai_assistant import render_ai_top_bar
 
 # --- PAGE SETUP ---
 st.set_page_config(page_title="Aktien-Dashboard Pro", page_icon="📈", layout="wide")
@@ -17,12 +17,12 @@ def load_css(css_file):
 
 load_css("style.css")
 
+# Top Header Bereich
 st.title("📈 Mein Aktien-Dashboard Pro")
 
 # --- CACHED FUNCTIONS ---
 @st.cache_data(ttl=3600)
 def search_tickers(query):
-    """Sucht nach Unternehmensnamen und gibt eine Liste passender Ticker zurück."""
     if not query:
         return [("Apple Inc.", "AAPL")]
     
@@ -114,7 +114,6 @@ user_search = st.sidebar.text_input(
     placeholder="z. B. Apple, Tesla, BMW, NVDA..."
 )
 
-# Suchtreffer abrufen
 search_results = search_tickers(user_search)
 options_dict = {label: sym for label, sym in search_results}
 
@@ -129,7 +128,6 @@ symbol = options_dict[selected_option]
 st.sidebar.markdown("---")
 st.sidebar.subheader("⭐ Meine Watchlist")
 
-# Watchlist-Buttons
 col_fav1, col_fav2 = st.sidebar.columns(2)
 if symbol not in watchlist:
     if col_fav1.button("⭐ Zu Favoriten"):
@@ -153,11 +151,11 @@ st.sidebar.subheader("📊 Indikatoren")
 show_sma50 = st.sidebar.checkbox("SMA 50 (50-Tage-Durchschnitt)", value=True)
 show_sma200 = st.sidebar.checkbox("SMA 200 (200-Tage-Durchschnitt)", value=False)
 
-# --- UNTERNEHMENSKENNZAHLEN ZUERST LADEN ---
+# --- UNTERNEHMENSKENNZAHLEN LADEN ---
 info = get_ticker_info(symbol)
 
-# --- KI-ASSISTENT IN SIDEBAR EINBINDEN ---
-render_ai_sidebar(symbol, info, watchlist)
+# --- KI-ASSISTENT ALS ELEGANTES POP-UP OBEN LINKS ANZEIGEN ---
+render_ai_top_bar(symbol, info, watchlist)
 
 
 # --- HAUPTBEREICH: UNTERNEHMENSKENNZAHLEN ANZEIGEN ---
