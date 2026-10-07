@@ -1,0 +1,54 @@
+/* Haupthintergrund & Schriftart */
+.stApp {
+    background-color: #0e1117;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Karten-Look für Metriken/KPIs */
+div[data-testid="stMetric"] {
+    background-color: #1e222d;
+    border: 1px solid #2a2e39;
+    padding: 15px 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s ease-in-out;
+}
+
+div[data-testid="stMetric"]:hover {
+    transform: translateY(-2px);
+    border-color: #3b4252;
+}
+
+/* Sidebar Styling */
+section[data-testid="stSidebar"] {
+    background-color: #131722;
+    border-right: 1px solid #2a2e39;
+}
+
+/* Buttons verschönern */
+div.stButton > button {
+    width: 100%;
+    background-color: #2962ff;
+    color: white;
+    border-radius: 8px;
+    border: none;
+    padding: 10px 16px;
+    font-weight: 600;
+    transition: background-color 0.2s ease-in-out;
+}
+
+div.stButton > button:hover {
+    background-color: #1e54e4;
+    color: white;
+}
+
+/* Überschriften-Design */
+h1, h2, h3 {
+    color: #f0f3f6 !important;
+    font-weight: 600 !important;
+}
+
+/* Trennlinien */
+hr {
+    border-color: #2a2e39 !important;
+}
